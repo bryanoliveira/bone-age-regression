@@ -11,10 +11,10 @@ class Swish(nn.Module):
     def forward(self, x):
         return x * torch.sigmoid(x)
 
-class Model(nn.Module):
+class VGG(nn.Module):
 
     def __init__(self, features):
-        super(Model, self).__init__()
+        super(VGG, self).__init__()
         
         self.features = features
 
@@ -68,6 +68,7 @@ class Model(nn.Module):
             if isinstance(layer, nn.BatchNorm2d):
                 layer.eval()
                 
+                
 def make_layers(cfg, batch_norm=True):
     layers = []
     in_channels = 1
@@ -92,6 +93,6 @@ cfg = {
 
 if __name__ == '__main__':
     # test model
-    model = Model(make_layers(cfg['B']))
+    model = VGG(make_layers(cfg['B']))
     model.cuda()
     print(model)

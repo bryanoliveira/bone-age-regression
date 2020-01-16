@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[8]:
+# In[1]:
 
 
 EPOCHS = 20
@@ -10,7 +10,7 @@ LEARNING_RATE = 1e-3
 GENDER_SENSITIVE = True
 
 
-# In[16]:
+# In[10]:
 
 
 import os
@@ -23,17 +23,19 @@ import pandas as pd
 
 import torch
 import torch.optim as optim
+import torch.nn as nn
 
 from tensorboardX import SummaryWriter
 
-from model import Model, make_layers, cfg
+from model import VGG as Model, make_layers, cfg
+from resnet import resnet50
 from dataset import load_image, generate_dataset
 from radam import RAdam
 
 
 # # Load Dataset
 
-# In[10]:
+# In[3]:
 
 
 if not GENDER_SENSITIVE:
@@ -56,11 +58,11 @@ else:
 
 # # Train
 
-# In[18]:
+# In[4]:
 
 
 def generate_model():
-    model = Model(make_layers(cfg['B']))
+    model = resnet50(num_classes=1) # Model(make_layers(cfg['B']))
     model.cuda()
 
     optimizer = RAdam(model.parameters(), lr=LEARNING_RATE)
@@ -69,7 +71,7 @@ def generate_model():
     return model, optimizer, scheduler
 
 
-# In[19]:
+# In[5]:
 
 
 if not GENDER_SENSITIVE:
@@ -87,7 +89,7 @@ else:
     print(male_model) # print only one since they're equal
 
 
-# In[13]:
+# In[11]:
 
 
 def save_model(experiment_name, model, optimizer, scheduler, epoch, train_loss, val_loss):
@@ -106,11 +108,13 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
     train_loss_hist = collections.deque(maxlen=500)
     val_loss_hist = collections.deque(maxlen=500)
 
-    model.training = True
+    #model.training = True
     model.train()
-    model.freeze_bn()
+    #model.freeze_bn()
     
     best_val_loss = 1e6
+    
+    loss_fn = nn.MSELoss()
     
     writer = SummaryWriter()
 
@@ -121,8 +125,9 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
         for iter_num, data in enumerate(train_loader):
             optimizer.zero_grad()
 
-            loss = model([data['images'].cuda().float(), data['labels'].cuda().float()])
+            preds = model(data['images'].cuda().float())
 
+            loss = loss_fn(preds, data['labels'].cuda().float())
             loss = loss.mean()
 
             if bool(loss == 0):
@@ -195,7 +200,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
             save_model('checkpoint_' + experiment_name, model, optimizer, scheduler, epoch_num, train_loss, val_loss)
             best_val_loss = val_loss
 
-    model.training = False
+    # model.training = False
     model.eval()
     save_model('_final_' + experiment_name, model, optimizer, scheduler, EPOCHS - 1, np.mean(train_loss_hist), np.mean(val_loss_hist))
     
@@ -204,34 +209,35 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
     return model, optimizer, scheduler
 
 
-# In[14]:
+# In[12]:
 
 
 if not GENDER_SENSITIVE:
     print('\nTRAINING MIXED MODEL')
     mixed_model, mixed_optimizer, mixed_scheduler = train('mixed', mixed_model, mixed_optimizer, mixed_scheduler, mixed_train_loader, mixed_val_loader)
 else:
-    #print('\nTRAINING MALE MODEL')
-    #male_model, male_optimizer, male_scheduler = train('male', male_model, male_optimizer, male_scheduler, male_train_loader, male_val_loader)
+    print('\nTRAINING MALE MODEL')
+    male_model, male_optimizer, male_scheduler = train('male', male_model, male_optimizer, male_scheduler, male_train_loader, male_val_loader)
     print('\nTRAINING FEMALE MODEL')
     female_model, female_optimizer, female_scheduler = train('female', female_model, female_optimizer, female_scheduler, female_train_loader, female_val_loader)
 
 
 # # Final Validation & Loading
 
-# In[16]:
+# In[7]:
 
 
 if False: # if LOAD
     def load(path):
         checkpoint = torch.load(path)
+        print(checkpoint)
         return checkpoint
 
-    male_model = load('models/_final_male_2020-01-16 05:39:29.190551.pt')
-    female_model = load('models/_final_female_2020-01-16 08:05:38.533981.pt')
+    male_model = load('models/_final_male_2020-01-16 16:38:46.914512.pt')
+    #female_model = load('models/_final_female_2020-01-16 08:05:38.533981.pt')
 
-    male_model.cuda()
-    female_model.cuda()
+    #male_model.cuda()
+    #female_model.cuda()
 
 
 # # Generate Output
