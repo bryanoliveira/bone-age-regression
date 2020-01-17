@@ -17,6 +17,8 @@ import torch
 
 from torchvision import transforms
 
+from skimage.exposure import equalize_adapthist
+
 import PIL
 from PIL import ImageOps, ImageEnhance
 
@@ -38,7 +40,7 @@ class BoneAgeDataset(torch.utils.data.Dataset):
         self.transform = transforms.Compose([
             #transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0, hue=0),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomAffine(180, translate=(0.1, 0.1), scale=(0.15, 0.15), shear=None, resample=False, fillcolor=0),
+            transforms.RandomAffine(30, translate=(0.1, 0.1), scale=(0.1, 0.1), shear=None, resample=False, fillcolor=0),
         ]) if apply_transform else None
         
         if male is not None:
@@ -68,7 +70,12 @@ class BoneAgeDataset(torch.utils.data.Dataset):
 def load_image(img_path, transform=None):
     img = PIL.Image.open(img_path)
     img = transforms.functional.resize(img, (IMG_SIZE, IMG_SIZE), interpolation=2)
-    img = ImageOps.autocontrast(img)
+
+    # CLAHE contrast enhancement
+    img = np.array(img)
+    img = equalize_adapthist(img)
+    img = PIL.Image.fromarray(img)
+    #img = ImageOps.autocontrast(img)
     
     if transform is not None:
         img = transform(img)

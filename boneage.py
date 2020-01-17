@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[32]:
 
 
 EPOCHS = 20
 GRAD_NORM_CLIP = 0.1
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-4
 GENDER_SENSITIVE = True
 
+LOAD_MIXED = None
+LOAD_MALE = None # "models/_final_male_2020-01-17 00:28:01.567655.pt"
+LOAD_FEMALE = None # "models/_final_female_2020-01-17 01:07:06.278406.pt"
 
-# In[10]:
+
+# In[33]:
 
 
 import os
@@ -29,13 +33,14 @@ from tensorboardX import SummaryWriter
 
 from model import VGG as Model, make_layers, cfg
 from resnet import resnet50
+from mnasnet import mnasnet1_0
 from dataset import load_image, generate_dataset
 from radam import RAdam
 
 
 # # Load Dataset
 
-# In[3]:
+# In[34]:
 
 
 if not GENDER_SENSITIVE:
@@ -58,11 +63,11 @@ else:
 
 # # Train
 
-# In[4]:
+# In[36]:
 
 
 def generate_model():
-    model = resnet50(num_classes=1) # Model(make_layers(cfg['B']))
+    model = mnasnet1_0(num_classes=1, in_channels=1) # resnet50(num_classes=1) # Model(make_layers(cfg['B']))
     model.cuda()
 
     optimizer = RAdam(model.parameters(), lr=LEARNING_RATE)
@@ -70,26 +75,40 @@ def generate_model():
     
     return model, optimizer, scheduler
 
+def load_model(path):
+    checkpoint = torch.load(path)
+    print('Loaded ' + path + ' on epoch', checkpoint['epoch'], 'train loss:', checkpoint['train_loss'], 'and val loss: ', checkpoint['val_loss'])
+    return checkpoint['model'], checkpoint['optimizer'], checkpoint['scheduler']
 
-# In[5]:
+
+# In[37]:
 
 
 if not GENDER_SENSITIVE:
     # full mixed (male/female) model
-    mixed_model, mixed_optimizer, mixed_scheduler = generate_model()
+    if LOAD_MIXED is None:
+        mixed_model, mixed_optimizer, mixed_scheduler = generate_model()
+    else:
+        mixed_model, mixed_optimizer, mixed_scheduler = load_model(LOAD_MIXED)
     print(mixed_model)
     
 else:
     # male model
-    male_model, male_optimizer, male_scheduler = generate_model()
-    
+    if LOAD_MALE is None:
+        male_model, male_optimizer, male_scheduler = generate_model()
+    else:
+        male_model, male_optimizer, male_scheduler = load_model(LOAD_MALE)
+        
     # female model
-    female_model, female_optimizer, female_scheduler = generate_model()
+    if LOAD_FEMALE is None:
+        female_model, female_optimizer, female_scheduler = generate_model()
+    else:
+        female_model, female_optimizer, female_scheduler = load_model(LOAD_FEMALE)
     
     print(male_model) # print only one since they're equal
 
 
-# In[11]:
+# In[25]:
 
 
 def save_model(experiment_name, model, optimizer, scheduler, epoch, train_loss, val_loss):
@@ -170,7 +189,8 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
         progress = tqdm.tqdm(total=len(val_loader), desc='Validation Status', position=0)
         for iter_num, data in enumerate(val_loader):
             with torch.no_grad():
-                val_loss = model([data['images'].cuda().float(), data['labels'].cuda().float()])
+                preds = model(data['images'].cuda().float())
+                val_loss = loss_fn(preds, data['labels'].cuda().float())
                 val_loss.mean()
                 val_loss_hist.append(float(val_loss))
                 optimizer.zero_grad()
@@ -209,7 +229,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
     return model, optimizer, scheduler
 
 
-# In[12]:
+# In[8]:
 
 
 if not GENDER_SENSITIVE:
@@ -220,24 +240,6 @@ else:
     male_model, male_optimizer, male_scheduler = train('male', male_model, male_optimizer, male_scheduler, male_train_loader, male_val_loader)
     print('\nTRAINING FEMALE MODEL')
     female_model, female_optimizer, female_scheduler = train('female', female_model, female_optimizer, female_scheduler, female_train_loader, female_val_loader)
-
-
-# # Final Validation & Loading
-
-# In[7]:
-
-
-if False: # if LOAD
-    def load(path):
-        checkpoint = torch.load(path)
-        print(checkpoint)
-        return checkpoint
-
-    male_model = load('models/_final_male_2020-01-16 16:38:46.914512.pt')
-    #female_model = load('models/_final_female_2020-01-16 08:05:38.533981.pt')
-
-    #male_model.cuda()
-    #female_model.cuda()
 
 
 # # Generate Output
