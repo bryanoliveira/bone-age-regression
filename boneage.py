@@ -38,6 +38,9 @@ from resnet import resnet50
 from dataset import load_image, generate_dataset
 from radam import RAdam
 
+from fcm_notifier import FCMNotifier
+notifier = FCMNotifier()
+
 
 # # Load Dataset
 
@@ -126,7 +129,7 @@ def save_model(experiment_name, model, optimizer, scheduler, epoch, train_loss, 
     torch.save(checkpoint, 'models/' + experiment_name + '_' + str(datetime.datetime.now()) + '.pt')
     print('Model ' + experiment_name + ' saved.')
     
-def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader):
+def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader, epochs=20):
     train_loss_hist = collections.deque(maxlen=500)
     val_loss_hist = collections.deque(maxlen=500)
 
@@ -141,7 +144,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
     
     writer = SummaryWriter()
 
-    for epoch_num in range(EPOCHS):
+    for epoch_num in range(epochs):
         epoch_loss = []
 
         progress = tqdm.tqdm(total=len(train_loader), desc='Training Status', position=0)
@@ -179,7 +182,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
             )
             
             progress.update(1)
-            break
+            
             del loss
 
         train_loss = np.mean(train_loss_hist)
@@ -216,6 +219,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
         writer.add_scalar('loss/val_loss', val_loss, epoch_num)
         writer.add_scalar('loss/val_mae', val_mae, epoch_num)
         
+        notifier.notify(Epoch=epoch_num, Train_MAE=train_mae, Val_MAE=val_mae)
         print('Val - Ep: {} | Ls: {:1.5f} | MAE: {:1.3f}'.format(epoch_num, val_loss, val_mae))
 
         scheduler.step(np.mean(epoch_loss))
@@ -227,7 +231,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
 
     # model.training = False
     model.eval()
-    save_model('_final_' + experiment_name, model, optimizer, scheduler, EPOCHS - 1, np.mean(train_loss_hist), np.mean(val_loss_hist))
+    save_model('_final_' + experiment_name, model, optimizer, scheduler, epochs - 1, np.mean(train_loss_hist), np.mean(val_loss_hist))
     
     writer.close()
     
@@ -239,12 +243,12 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
 
 if not GENDER_SENSITIVE:
     print('\nTRAINING MIXED MODEL')
-    mixed_model, _, mixed_optimizer, mixed_scheduler = train('mixed', mixed_model, mixed_optimizer, mixed_scheduler, mixed_train_loader, mixed_val_loader)
+    mixed_model, _, mixed_optimizer, mixed_scheduler = train('mixed', mixed_model, mixed_optimizer, mixed_scheduler, mixed_train_loader, mixed_val_loader, EPOCHS)
 else:
     print('\nTRAINING MALE MODEL')
-    male_model, _, male_optimizer, male_scheduler = train('male', male_model, male_optimizer, male_scheduler, male_train_loader, male_val_loader)
+    male_model, _, male_optimizer, male_scheduler = train('male', male_model, male_optimizer, male_scheduler, male_train_loader, male_val_loader, EPOCHS)
     print('\nTRAINING FEMALE MODEL')
-    female_model, _, female_optimizer, female_scheduler = train('female', female_model, female_optimizer, female_scheduler, female_train_loader, female_val_loader)
+    female_model, _, female_optimizer, female_scheduler = train('female', female_model, female_optimizer, female_scheduler, female_train_loader, female_val_loader, EPOCHS)
 
 
 # # Generate Output
