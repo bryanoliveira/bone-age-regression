@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[32]:
+# In[10]:
 
 
 EPOCHS = 20
@@ -10,11 +10,11 @@ LEARNING_RATE = 1e-4
 GENDER_SENSITIVE = True
 
 LOAD_MIXED = None
-LOAD_MALE = None # "models/_final_male_2020-01-17 00:28:01.567655.pt"
-LOAD_FEMALE = None # "models/_final_female_2020-01-17 01:07:06.278406.pt"
+LOAD_MALE = 'models/resnet_mixed.pt'
+LOAD_FEMALE = 'models/resnet_mixed.pt'
 
 
-# In[33]:
+# In[2]:
 
 
 import os
@@ -24,6 +24,7 @@ import math
 import numpy as np # linear algebra
 import tqdm
 import pandas as pd
+import copy
 
 import torch
 import torch.optim as optim
@@ -31,16 +32,16 @@ import torch.nn as nn
 
 from tensorboardX import SummaryWriter
 
-from model import VGG as Model, make_layers, cfg
+#from model import VGG as Model, make_layers, cfg
 from resnet import resnet50
-from mnasnet import mnasnet1_0
+#from mnasnet import mnasnet1_0
 from dataset import load_image, generate_dataset
 from radam import RAdam
 
 
 # # Load Dataset
 
-# In[34]:
+# In[3]:
 
 
 if not GENDER_SENSITIVE:
@@ -63,25 +64,27 @@ else:
 
 # # Train
 
-# In[36]:
+# In[8]:
 
 
 def generate_model():
-    model = mnasnet1_0(num_classes=1, in_channels=1) # resnet50(num_classes=1) # Model(make_layers(cfg['B']))
+    print('Generating model')
+    model = resnet50(num_classes=1, in_channels=1) # mnasnet1_0(num_classes=1, in_channels=1) # Model(make_layers(cfg['B']))
     model.cuda()
 
     optimizer = RAdam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, verbose=True)
     
     return model, optimizer, scheduler
 
 def load_model(path):
+    print('Loading model from ', path)
     checkpoint = torch.load(path)
     print('Loaded ' + path + ' on epoch', checkpoint['epoch'], 'train loss:', checkpoint['train_loss'], 'and val loss: ', checkpoint['val_loss'])
     return checkpoint['model'], checkpoint['optimizer'], checkpoint['scheduler']
 
 
-# In[37]:
+# In[11]:
 
 
 if not GENDER_SENSITIVE:
@@ -108,7 +111,7 @@ else:
     print(male_model) # print only one since they're equal
 
 
-# In[25]:
+# In[6]:
 
 
 def save_model(experiment_name, model, optimizer, scheduler, epoch, train_loss, val_loss):
@@ -131,6 +134,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
     model.train()
     #model.freeze_bn()
     
+    best_model = None
     best_val_loss = 1e6
     
     loss_fn = nn.MSELoss()
@@ -175,7 +179,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
             )
             
             progress.update(1)
-
+            break
             del loss
 
         train_loss = np.mean(train_loss_hist)
@@ -219,6 +223,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
         if val_loss < best_val_loss:
             save_model('checkpoint_' + experiment_name, model, optimizer, scheduler, epoch_num, train_loss, val_loss)
             best_val_loss = val_loss
+            best_model = copy.deepcopy(model)
 
     # model.training = False
     model.eval()
@@ -226,25 +231,25 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
     
     writer.close()
     
-    return model, optimizer, scheduler
+    return best_model, model, optimizer, scheduler
 
 
-# In[8]:
+# In[7]:
 
 
 if not GENDER_SENSITIVE:
     print('\nTRAINING MIXED MODEL')
-    mixed_model, mixed_optimizer, mixed_scheduler = train('mixed', mixed_model, mixed_optimizer, mixed_scheduler, mixed_train_loader, mixed_val_loader)
+    mixed_model, _, mixed_optimizer, mixed_scheduler = train('mixed', mixed_model, mixed_optimizer, mixed_scheduler, mixed_train_loader, mixed_val_loader)
 else:
     print('\nTRAINING MALE MODEL')
-    male_model, male_optimizer, male_scheduler = train('male', male_model, male_optimizer, male_scheduler, male_train_loader, male_val_loader)
+    male_model, _, male_optimizer, male_scheduler = train('male', male_model, male_optimizer, male_scheduler, male_train_loader, male_val_loader)
     print('\nTRAINING FEMALE MODEL')
-    female_model, female_optimizer, female_scheduler = train('female', female_model, female_optimizer, female_scheduler, female_train_loader, female_val_loader)
+    female_model, _, female_optimizer, female_scheduler = train('female', female_model, female_optimizer, female_scheduler, female_train_loader, female_val_loader)
 
 
 # # Generate Output
 
-# In[20]:
+# In[17]:
 
 
 test_df = pd.read_csv('test.csv')
@@ -270,7 +275,7 @@ for key, row in test_df.iterrows():
 submission.head()
 
 
-# In[19]:
+# In[18]:
 
 
 submission.to_csv('submission.csv', index=False)

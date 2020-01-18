@@ -24,7 +24,7 @@ from PIL import ImageOps, ImageEnhance
 
 
 class BoneAgeDataset(torch.utils.data.Dataset):
-    def __init__(self, csv_file, root_dir, male=None, apply_transform=False):
+    def __init__(self, csv_file, root_dir, male=None, apply_transform=True):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -38,9 +38,8 @@ class BoneAgeDataset(torch.utils.data.Dataset):
         self.root_dir = root_dir
         
         self.transform = transforms.Compose([
-            #transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0, hue=0),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomAffine(30, translate=(0.1, 0.1), scale=(0.1, 0.1), shear=None, resample=False, fillcolor=0),
+            transforms.RandomAffine(30, translate=(0.1, 0.1), scale=(0.7, 1), shear=None, resample=False, fillcolor=0),
         ]) if apply_transform else None
         
         if male is not None:
@@ -75,7 +74,6 @@ def load_image(img_path, transform=None):
     img = np.array(img)
     img = equalize_adapthist(img)
     img = PIL.Image.fromarray(img)
-    #img = ImageOps.autocontrast(img)
     
     if transform is not None:
         img = transform(img)

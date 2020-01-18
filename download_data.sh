@@ -1,0 +1,1 @@
+kaggle competitions download -c bone-age-regression
