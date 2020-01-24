@@ -10,8 +10,8 @@ LEARNING_RATE = 1e-4
 GENDER_SENSITIVE = True
 
 LOAD_MIXED = None
-LOAD_MALE = 'models/resnet_mixed.pt'
-LOAD_FEMALE = 'models/resnet_mixed.pt'
+LOAD_MALE = None
+LOAD_FEMALE = None
 
 
 # In[2]:
