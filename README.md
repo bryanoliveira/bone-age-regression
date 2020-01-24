@@ -7,9 +7,9 @@ This competition was inspired by [RSNA's Bone Age challenge](https://www.kaggle.
 <img src="docs/ex1.png" width="250" height="320"> <img src="docs/ex2.png" width="250" height="320"> <img src="docs/ex3.png" width="250" height="320">
 > X-ray images provided in the competition's dataset.
 
-My final solution used a ResNet50 architecture, a Rectified Adam optimizer and geometric data augmentations. This model achieved a Mean Average Error of 13.2 after 20 epochs of training, which I believe could be improved given more training time and a better preprocessing pipeline (using object detection to segment the hands and normalizing hand rotation, for example). I didn't saved all the hyperparameters I experimented with (neither their results) but you'll find in the code the ones I used for my last submission.
+My final solution used a [ResNet50](https://arxiv.org/abs/1512.03385) architecture, a [Rectified Adam](https://arxiv.org/abs/1908.03265) optimizer and geometric data augmentations. This model achieved a Mean Average Error of 13.2 after 20 epochs of training, which I believe could be improved given more training time and a better preprocessing pipeline (using object detection to segment the hands and normalizing hand rotation, for example). I didn't saved all the hyperparameters I experimented with (neither their results) but you'll find in the code the ones I used for my last submission.
 
-I used tensorboard to log the training curves and tqdm to track progress. I also used [FCMNotifier](https://github.com/bryanlincoln/fcm-notifier), a tool I made to send logs as notifications to my phone.
+I used [tensorboard](https://www.tensorflow.org/tensorboard) to log the training curves and [tqdm](https://github.com/tqdm/tqdm) to track progress. I also used [FCMNotifier](https://github.com/bryanlincoln/fcm-notifier), a tool I made to send logs as notifications to my phone.
 
 ## Requirements
 
