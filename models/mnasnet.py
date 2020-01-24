@@ -210,8 +210,8 @@ def mnasnet0_5(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     model = MNASNet(0.5, **kwargs)
-    if pretrained:
-        _load_pretrained("mnasnet0_5", model, progress)
+    #if pretrained:
+    #    _load_pretrained("mnasnet0_5", model, progress)
     return model
 
 

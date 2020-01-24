@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .utils import load_state_dict_from_url
+# from .utils import load_state_dict_from_url
 
 
 __all__ = [
@@ -87,10 +87,9 @@ def _vgg(arch, cfg, batch_norm, pretrained, progress, in_channels=3, **kwargs):
     if pretrained:
         kwargs['init_weights'] = False
     model = VGG(make_layers(cfgs[cfg], batch_norm=batch_norm, in_channels=in_channels), **kwargs)
-    if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[arch],
-                                              progress=progress)
-        model.load_state_dict(state_dict)
+    #if pretrained:
+    #    state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
+    #    model.load_state_dict(state_dict)
     return model
 
 

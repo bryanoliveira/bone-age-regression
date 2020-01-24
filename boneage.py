@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[10]:
+# In[9]:
 
 
-EPOCHS = 20
+EPOCHS = 1 # should be at least 50, 1 is for testing purposes
 GRAD_NORM_CLIP = 0.1
 LEARNING_RATE = 1e-4
-GENDER_SENSITIVE = True
+GENDER_SENSITIVE = True # if false is treated as the "mixed" parts of this code
 
+# trained model path to be loaded
 LOAD_MIXED = None
 LOAD_MALE = None
 LOAD_FEMALE = None
 
 
-# In[2]:
+# In[10]:
 
 
 import os
@@ -32,19 +33,22 @@ import torch.nn as nn
 
 from tensorboardX import SummaryWriter
 
-#from model import VGG as Model, make_layers, cfg
-from resnet import resnet50
-#from mnasnet import mnasnet1_0
-from dataset import load_image, generate_dataset
-from radam import RAdam
+#from models.vgg import vgg16_bn as Model
+from models.resnet import resnet50 as Model
+#from models.mnasnet import mnasnet1_0 as Model
 
+from radam_optimizer import RAdam
+
+from dataset import load_image, generate_dataset
+
+# module to notify training status
 from fcm_notifier import FCMNotifier
 notifier = FCMNotifier()
 
 
 # # Load Dataset
 
-# In[3]:
+# In[11]:
 
 
 if not GENDER_SENSITIVE:
@@ -67,12 +71,12 @@ else:
 
 # # Train
 
-# In[8]:
+# In[12]:
 
 
 def generate_model():
     print('Generating model')
-    model = resnet50(num_classes=1, in_channels=1) # mnasnet1_0(num_classes=1, in_channels=1) # Model(make_layers(cfg['B']))
+    model = Model(num_classes=1, in_channels=1)
     model.cuda()
 
     optimizer = RAdam(model.parameters(), lr=LEARNING_RATE)
@@ -87,7 +91,7 @@ def load_model(path):
     return checkpoint['model'], checkpoint['optimizer'], checkpoint['scheduler']
 
 
-# In[11]:
+# In[13]:
 
 
 if not GENDER_SENSITIVE:
@@ -114,7 +118,7 @@ else:
     print(male_model) # print only one since they're equal
 
 
-# In[6]:
+# In[7]:
 
 
 def save_model(experiment_name, model, optimizer, scheduler, epoch, train_loss, val_loss):
@@ -126,16 +130,14 @@ def save_model(experiment_name, model, optimizer, scheduler, epoch, train_loss, 
         "train_loss": train_loss,
         "val_loss": val_loss
     }
-    torch.save(checkpoint, 'models/' + experiment_name + '_' + str(datetime.datetime.now()) + '.pt')
+    torch.save(checkpoint, 'trained_models/' + experiment_name + '_' + str(datetime.datetime.now()) + '.pt')
     print('Model ' + experiment_name + ' saved.')
     
 def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader, epochs=20):
     train_loss_hist = collections.deque(maxlen=500)
     val_loss_hist = collections.deque(maxlen=500)
 
-    #model.training = True
     model.train()
-    #model.freeze_bn()
     
     best_model = None
     best_val_loss = 1e6
@@ -229,7 +231,6 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
             best_val_loss = val_loss
             best_model = copy.deepcopy(model)
 
-    # model.training = False
     model.eval()
     save_model('_final_' + experiment_name, model, optimizer, scheduler, epochs - 1, np.mean(train_loss_hist), np.mean(val_loss_hist))
     
@@ -238,7 +239,7 @@ def train(experiment_name, model, optimizer, scheduler, train_loader, val_loader
     return best_model, model, optimizer, scheduler
 
 
-# In[7]:
+# In[8]:
 
 
 if not GENDER_SENSITIVE:
@@ -253,7 +254,7 @@ else:
 
 # # Generate Output
 
-# In[17]:
+# In[ ]:
 
 
 test_df = pd.read_csv('test.csv')
@@ -279,7 +280,7 @@ for key, row in test_df.iterrows():
 submission.head()
 
 
-# In[18]:
+# In[ ]:
 
 
 submission.to_csv('submission.csv', index=False)
