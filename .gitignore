@@ -1,4 +1,4 @@
-models/
+trained_models/
 runs/
 images/
 sample_submission.csv
