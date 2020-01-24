@@ -1,0 +1,8 @@
+kaggle
+torch
+torchVision
+numpy
+pandas
+scikit-image
+pillow
+tqdm
