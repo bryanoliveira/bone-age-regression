@@ -1,6 +1,6 @@
 # Bone Age Regression with Deep Learning
 
-This is my code for the I2A2 Bone Age Regression competition. I learned a lot building this pipeline from scratch and was able to experiment with different model architectures and optimizers. This was my first end-to-end image regression model and it was very nice seeing my theoretic knowledge working in practice.
+This is my code for the I2A2 Bone Age Regression competition. I learned a lot building this pipeline from scratch and was able to experiment with different model architectures and optimizers. This was my first end-to-end image regression model and it was very nice seeing my theoretic knowledge work in practice.
 
 This competition was inspired by [RSNA's Bone Age challenge](https://www.kaggle.com/kmader/rsna-bone-age), in which given hand X-ray images, the model should predict the patient's bone age.
 
